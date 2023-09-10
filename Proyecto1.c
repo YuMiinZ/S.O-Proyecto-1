@@ -52,18 +52,6 @@ void parseArguments(char *argv[], RegexPattern **patterns, FilePartition **files
         (*patternsCount)++;
         argument = strtok(NULL, "|");
     }
-
-    argumentString = argv[2];
-    argument = strtok(argumentString, "|");
-    while (argument != NULL) {
-        if (*fileCount >= filesSize) {
-            filesSize *= 2;
-            *files = (FilePartition *)realloc(*files, sizeof(FilePartition) * filesSize);
-        }
-        strncpy((*files)[*fileCount].filePath, argument, sizeof((*files)[*fileCount].filePath));
-        (*fileCount)++;
-        argument = strtok(NULL, "|");
-    }
 }
 
 //Procesamiento de lectura del archivo en búsqueda de los patrones a buscar
@@ -81,7 +69,7 @@ int main(int argc, char *argv[]){
 
 
     if (argc < 3) {
-        fprintf(stderr, "Need: %s 'pattern1|pattern2|...' 'fileName|fileName|...'\n", argv[0]);
+        fprintf(stderr, "Need: %s 'pattern1|pattern2|...' 'fileName'\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
