@@ -11,14 +11,13 @@
 #include <sys/msg.h>
 #include <sys/stat.h>
 
-#define MSGSZ 8192
 #define BUFFER_SIZE 8192
 #define NUM_PROCESSES 4 // Número de procesos en el pool hay que probar para ver con cuál es más efectivo
 //Ronda entre 4-8 procesos.
 
 struct message {
   long type;
-  char text[MSGSZ];
+  char text[BUFFER_SIZE];
 } msg;
 
 typedef struct {
@@ -74,9 +73,8 @@ void processFile(){
 }
 
 int main(int argc, char *argv[]){
-    int ;
     key_t msqkey = 999;
-  int msqid = msgget(msqkey, IPC_CREAT | S_IRUSR | S_IWUSR),patternsCount=0, filesCount=0;
+    int msqid = msgget(msqkey, IPC_CREAT | S_IRUSR | S_IWUSR),patternsCount=0, filesCount=0, status;
 
     RegexPattern *patterns=NULL;
     FilePartition *files=NULL;
@@ -90,10 +88,15 @@ int main(int argc, char *argv[]){
     parseArguments(argv, &patterns, &files, &patternsCount, &filesCount);
 
     //Crear el pool de procesos
-    for(int contador=0; contador<NUM_PROCESSES; contador++){
-
-    }
     //Sincronizar procesos
+    for(int contador=0; contador<NUM_PROCESSES; contador++){
+        pid_t pid = fork();
+        if(pid==0){
+            //processfile?
+            //mensaje?
+        }
+    }
+    
 
     for (int i = 0; i < patternsCount; i++) {
         printf("Expresión regular almacenada: %s\n", patterns[i].regexStr);
