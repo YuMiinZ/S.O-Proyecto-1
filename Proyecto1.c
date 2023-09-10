@@ -18,6 +18,7 @@
 struct message {
   long type;
   char text[BUFFER_SIZE];
+  long posicionLectura;
 } msg;
 
 typedef struct {
@@ -25,15 +26,13 @@ typedef struct {
 } RegexPattern;
 
 typedef struct {
-    char filePath[256]; 
-    off_t start;
-    off_t end;
+    
 } FilePartition;
 
 
 //Partición de expresiones regulares y lista de archivos
-
-void parseArguments(char *argv[], RegexPattern **patterns, FilePartition **files, int *patternsCount, int *fileCount) {
+/*
+void parseArguments(char *argv[], RegexPattern **patterns, FilePartition **file, int *patternsCount) {
     int patternsSize = 1;
     int filesSize = 1;
 
@@ -41,7 +40,7 @@ void parseArguments(char *argv[], RegexPattern **patterns, FilePartition **files
     char *argument = strtok(argumentString, "|");
 
     *patterns = (RegexPattern *)malloc(sizeof(RegexPattern) * patternsSize);
-    *files = (FilePartition *)malloc(sizeof(FilePartition) * filesSize);
+    *file = (FilePartition *)malloc(sizeof(FilePartition) * BUFFER_SIZE);
 
     while (argument != NULL) {
         if (*patternsCount >= patternsSize) {
@@ -52,6 +51,10 @@ void parseArguments(char *argv[], RegexPattern **patterns, FilePartition **files
         (*patternsCount)++;
         argument = strtok(NULL, "|");
     }
+}*/
+
+void readFile(){
+    long posUltimoSalto;
 }
 
 //Procesamiento de lectura del archivo en búsqueda de los patrones a buscar
@@ -61,19 +64,24 @@ void processFile(){
 }
 
 int main(int argc, char *argv[]){
-    key_t msqkey = 999;
-    int msqid = msgget(msqkey, IPC_CREAT | S_IRUSR | S_IWUSR),patternsCount=0, filesCount=0, status;
-
-    RegexPattern *patterns=NULL;
-    FilePartition *files=NULL;
-
-
+    //Revisión de argumentos (pattern y archivo)
     if (argc < 3) {
         fprintf(stderr, "Need: %s 'pattern1|pattern2|...' 'fileName'\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    parseArguments(argv, &patterns, &files, &patternsCount, &filesCount);
+
+    key_t msqkey = 999;
+    int msqid = msgget(msqkey, IPC_CREAT | S_IRUSR | S_IWUSR),patternsCount=0, status;
+    
+    
+    //RegexPattern *patterns=NULL;
+    //FILE *file=NULL;
+
+
+    
+
+    //parseArguments(argv, &patterns, &file, &patternsCount);
 
     //Crear el pool de procesos
     //Sincronizar procesos
@@ -84,24 +92,14 @@ int main(int argc, char *argv[]){
             //mensaje?
         }
     }
-    
 
-    for (int i = 0; i < patternsCount; i++) {
-        printf("Expresión regular almacenada: %s\n", patterns[i].regexStr);
-    }
-
-    
-    for (int i = 0; i < filesCount; i++) {
-        printf("Expresión regular almacenada: %s\n", files[i].filePath);
-    }
-    
 
 
     //Liberación de memoria
-    free(patterns);
-    free(files);
-    patterns = NULL;
-    files = NULL;
+    //free(patterns);
+    //free(file);
+    //patterns = NULL;
+    //file = NULL;
 }
 
 
