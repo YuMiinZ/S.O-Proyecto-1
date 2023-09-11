@@ -30,27 +30,20 @@ typedef struct {
 
 
 //Partición de expresiones regulares y lista de archivos
-/*
-void parseArguments(char *argv[], RegexPattern **patterns, FilePartition **file, int *patternsCount) {
-    int patternsSize = 1;
-    int filesSize = 1;
 
-    char *argumentString = argv[1];
-    char *argument = strtok(argumentString, "|");
+void parseArguments(char *argv[], RegexPattern **patterns, int *patternsCount) {
+    char *patternsString = argv[1];
+    char *token = strtok(patternsString, "|");
+    *patternsCount = 0;
 
-    *patterns = (RegexPattern *)malloc(sizeof(RegexPattern) * patternsSize);
-    *file = (FilePartition *)malloc(sizeof(FilePartition) * BUFFER_SIZE);
-
-    while (argument != NULL) {
-        if (*patternsCount >= patternsSize) {
-            patternsSize *= 2;
-            *patterns = (RegexPattern *)realloc(*patterns, sizeof(RegexPattern) * patternsSize);
-        }
-        (*patterns)[*patternsCount].regexStr = strdup(argument);
+    while (token != NULL) {
+        // Aumenta el tamaño del arreglo de estructuras
+        *patterns = realloc(*patterns, (*patternsCount + 1) * sizeof(RegexPattern));
+        (*patterns)[*patternsCount].regexStr = strdup(token);
         (*patternsCount)++;
-        argument = strtok(NULL, "|");
+        token = strtok(NULL, "|");
     }
-}*/
+}
 
 int readFile(char *file, long displacement){
     long lastNewLinePosition=displacement;
@@ -125,8 +118,20 @@ int main(int argc, char *argv[]){
         exit(EXIT_FAILURE);
     }
 
+    //Patterns
+    int patternsCount = 0;
+    RegexPattern *patterns = NULL;
 
+    parseArguments(argv, &patterns, &patternsCount);
 
+    // Imprimir los patterns
+    for (int i = 0; i < patternsCount; i++) {
+        printf("Pattern %d: %s\n", i + 1, patterns[i].regexStr);
+    }
+
+    
+
+    //Falta revisar el +1 
     key_t msqkey_child = 999;
     key_t msqkey_parent = 888;
     int cont=0, status;
@@ -194,52 +199,6 @@ int main(int argc, char *argv[]){
     msgctl(msqkey_parent, IPC_RMID, NULL);
     msgctl(msqkey_child, IPC_RMID, NULL);
 
-
+    free(patterns); 
     exit(0);
 }
-
-    /*key_t msqkey_child = 999;
-    key_t msqkey_parent = 888;
-    int cont=0, status;
-    int msqid_parent = msgget(msqkey_parent, IPC_CREAT | S_IRUSR | S_IWUSR);
-    int msqid_child = msgget(msqkey_child, IPC_CREAT | S_IRUSR | S_IWUSR);
-    long displacement=0;
-    int mutex=0;*/
-/*
-    for (cont = 0; cont < 1; cont++) {
-        if (fork() == 0) {
-            while (1) {
-                msgrcv(msqid, &msg, sizeof(msg.text), 2, 0);
-                displacement = msg.linePosition;
-                msg.type = 1;
-                if (msg.linePosition==0)
-                {
-                    msg.linePosition = readFile(argv[2], displacement);
-                }else if(msg.linePosition==-1){
-                    printf("Se ha alcanzado el final del archivo.\n");
-                    kill(0, SIGKILL);
-                    exit(0);
-                }else{
-                    msg.linePosition = readFile(argv[2], displacement+1);
-                }
-                
-                
-                msgsnd(msqid, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
-            }
-        } else {
-            while(1){
-                if (displacement == 0) {
-                    msg.type = 2;
-                    msg.linePosition = 0;
-                    msgsnd(msqid, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
-                    displacement=1;
-                }
-
-                msgrcv(msqid, &msg, sizeof(msg.text), 1, 0);
-                msg.type = 2;
-                msg.linePosition = msg.linePosition + 1;
-                msgsnd(msqid, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
-            }
-            
-        }
-    }*/
