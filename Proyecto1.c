@@ -171,7 +171,7 @@ int main(int argc, char *argv[]){
                         msg.type = 3;
                         msg.childStatus=0;
                         msgsnd(msqid_parent, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
-                        printf("Mensaje enviado de finalizacion");
+                        printf("Mensaje enviado de finalizacion\n");
                         exit(0);
                     }
                     
@@ -186,7 +186,7 @@ int main(int argc, char *argv[]){
         //printf("Padre recibe algo hijo %ld, tipo de mensaje %ld\n", msg.pid, msg.type);
         if(msg.type==2){
             printf("Hijo 1... %ld\n", childPid[1][0]);
-            msg.type = childPid[0][0];
+            msg.type = childPid[1][0];
             msg.linePosition = msg.linePosition;
             msgsnd(msqid_child, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
         }
