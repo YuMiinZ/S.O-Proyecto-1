@@ -24,70 +24,25 @@ struct message {
   int childStatus;
 } msg;
 
-typedef struct {
-    char *regexStr;
-} RegexPattern;
-
-
-//Partición de expresiones regulares y lista de archivos
-/*
-void parseArguments(char *argv[], RegexPattern **patterns, int *patternsCount) {
-    char *patternsString = argv[1];
-    char *token = strtok(patternsString, "|");
-    *patternsCount = 0;
-
-    while (token != NULL) {
-        // Aumenta el tamaño del arreglo de estructuras
-        *patterns = realloc(*patterns, (*patternsCount + 1) * sizeof(RegexPattern));
-        (*patterns)[*patternsCount].regexStr = strdup(token);
-        (*patternsCount)++;
-        token = strtok(NULL, "|");
-    }
-}*/
-
 int readFile(char *file, long displacement, int msqid_parent, int *childStatus){
     long lastNewLinePosition=displacement;
     char buffer[20];
     size_t i;
     FILE *fp;
     fp = fopen(file,"r");
-
-
     
     if(!fp)
     {
         printf("Error in opening file\n");
     }
-    //Initially, the file pointer points to the starting of the file.
-    //printf("Position of the pointer : %ld\n",ftell(fp));
-
     size_t bytesRead;
-
-    // Imprime el contenido del buffer después del bucle
     
     //FUNCIONA AQUI PARA ABAJO
     fseek( fp,  displacement,  0);
     printf("\nComence desde aqui: %ld\n", ftell(fp));
-    //bytesRead= fread(&buffer, sizeof(char), sizeof(buffer), fp);
-    //printf("%s", buffer);
-
-    //printf("%s", buffer);
     fgets(buffer, sizeof(buffer), fp);
 
-/*
-    for (i = 0; i < sizeof(buffer); i++) {
-        if (buffer[i] == '\n') {
-            // Se encontró un carácter de nueva línea
-            //printf("Encontrado un carácter de nueva línea en la posición: %ld\n", i);
-            lastNewLinePosition = i+displacement;
-        }
-
-    }*/
-
     printf("\nLast new line: %ld\n", lastNewLinePosition);
-
-    
-    //printf("\nPosition of the pointer : %ld\n",ftell(fp));
 
     lastNewLinePosition=ftell(fp);
     if (feof(fp)) {
@@ -125,29 +80,16 @@ int main(int argc, char *argv[]){
         exit(EXIT_FAILURE);
     }
 
-    //Patterns
-    int patternsCount = 0;
-    RegexPattern *patterns = NULL;
-
-    //parseArguments(argv, &patterns, &patternsCount);
-
-    // Imprimir los patterns
-   /* for (int i = 0; i < patternsCount; i++) {
-        printf("Pattern %d: %s\n", i + 1, patterns[i].regexStr);
-    }*/
-
-    
-
-    //Falta revisar el +1 
     key_t msqkey_child = 999;
     key_t msqkey_parent = 888;
-    int cont=0, status, childStatus=0;
+    int cont=0, status, childStatus=0,childPid[NUM_PROCESSES];
     int msqid_parent = msgget(msqkey_parent, IPC_CREAT | S_IRUSR | S_IWUSR);//Cola padre
     int msqid_child = msgget(msqkey_child, IPC_CREAT | S_IRUSR | S_IWUSR); //Cola hijo
-    long displacement=0, actualPidChild, childPid[NUM_PROCESSES][1];
-    int count_child=0;
 
-    for (int i = 0; i < 2; i++) {
+    long displacement=0, actualPidChild;
+    
+
+    for (int i = 0; i < 1; i++) {
         long pid = (long)fork();
         if (pid == 0) {     
             actualPidChild=getpid();
@@ -157,14 +99,11 @@ int main(int argc, char *argv[]){
             msg.childStatus=0;
             msgsnd(msqid_parent, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
             while(1){
-                msgrcv(msqid_child, &msg, sizeof(msg.text), actualPidChild, 0);
-                printf("SOY YO? mi pid %ld, lo que recibi %ld",actualPidChild, msg.type );
-
+                msgrcv(msqid_child, &msg, sizeof(msg.text), 0, 0);
+                printf("SOY YO? mi pid %ld, lo que recibi %ld\n",actualPidChild, msg.type );
                 if(msg.type==actualPidChild){
                     displacement = msg.linePosition;
-                    //printf("LinePosition %ld - PID: %d\n", msg.linePosition, getpid());
                     int line  = readFile(argv[2], displacement, msqid_parent, &childStatus);
-                    //printf("Line %d\n", line);
                     if (line==-1)
                     {
                         printf("Se ha alcanzado el final del archivo.\n");
@@ -174,48 +113,61 @@ int main(int argc, char *argv[]){
                         printf("Mensaje enviado de finalizacion\n");
                         exit(0);
                     }
-                    
                 } 
             }
         }
     }
 
+    int count_child=0;
     while(1){
-        
         msgrcv(msqid_parent, &msg, sizeof(msg.text), 0, 0);
-        //printf("Padre recibe algo hijo %ld, tipo de mensaje %ld\n", msg.pid, msg.type);
         if(msg.type==2){
-            printf("Hijo 1... %ld\n", childPid[1][0]);
-            msg.type = childPid[1][0];
+            //printf("Hijo 0 %ld e Hijo 1... %ld\n",childPid[0][0], childPid[1][0]);
+            //msg.type = 1;
+            msg.type = childPid[0];
             msg.linePosition = msg.linePosition;
             msgsnd(msqid_child, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
         }
         else if(msg.type==3){
             printf("\nPadre recibio linea final: %ld\n", msg.linePosition);
+            msgctl(msqkey_parent, IPC_RMID, NULL);
+            msgctl(msqkey_child, IPC_RMID, NULL);
             exit(0);
         }
         else if(msg.type==4){
             printf("Nuevo pid entrante %ld\n", msg.pid);
-            childPid[count_child][0]=msg.pid;
-            childPid[count_child][1]=0;
-            printf("Nuevo pid registrado %ld\n", childPid[count_child][0]);
-            count_child++;
+            childPid[count_child]=msg.pid;
+            //childPid[count_child]=1;
+            printf("Nuevo pid registrado %d\n", childPid[count_child]);
+            
 
             if (displacement == 0) {
                 //printf("Enviando mensaje...\n");
-                msg.type = childPid[0][0];
+                //msg.type = 1;
+                msg.type = childPid[0];
+                //msg.type = childPid[0][0];
                 msg.linePosition = 0;
                 //printf("Pid del hijo que comenzara a leer... %ld\n", msg.pid);
                 msgsnd(msqid_child, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
-                printf("Mensaje enviado... al hijo 0..%ld\n",childPid[0][0]);
+                printf("Mensaje enviado... al hijo 0 tiene un %d\n",childPid[0]);
                 displacement=-1;
             }
+            count_child++;
         }
     }
 
-    //readFile(argv[2], 0);
+    /*for (cont = 0; cont < NUM_PROCESSES; cont++) {
+        wait(&status);
+    }*/
+    
+    msgctl(msqkey_parent, IPC_RMID, NULL);
+    msgctl(msqkey_child, IPC_RMID, NULL);
 
-    /*for (cont = 0; cont < 2; cont++) {
+    exit(0);
+}
+
+
+/*for (cont = 0; cont < 2; cont++) {
         long pid= (long)fork();
         if (pid == 0) {
             actualPidChild=getpid();
@@ -281,15 +233,3 @@ int main(int argc, char *argv[]){
             
         }
     }*/
-
-
-    /*for (cont = 0; cont < NUM_PROCESSES; cont++) {
-        wait(&status);
-    }*/
-    
-    //msgctl(msqkey_parent, IPC_RMID, NULL);
-    //msgctl(msqkey_child, IPC_RMID, NULL);
-
-    free(patterns); 
-    exit(0);
-}
