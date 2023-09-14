@@ -185,7 +185,8 @@ int main(int argc, char *argv[]){
         msgrcv(msqid_parent, &msg, sizeof(msg.text), 0, 0);
         //printf("Padre recibe algo hijo %ld, tipo de mensaje %ld\n", msg.pid, msg.type);
         if(msg.type==2){
-            printf("Hijo 1... %ld\n", childPid[1][0]);
+            printf("Hijo 0 %ld e Hijo 1... %ld\n",childPid[0][0], childPid[1][0]);
+            
             msg.type = childPid[1][0];
             msg.linePosition = msg.linePosition;
             msgsnd(msqid_child, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
