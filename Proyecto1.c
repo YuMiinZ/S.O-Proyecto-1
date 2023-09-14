@@ -111,40 +111,34 @@ int main(int argc, char *argv[]){
 
     int registered_child_count = 0;
 
-for (int i = 0; i < 8; i++) {
-    long pid = (long)fork();
-    if (pid == 0) {     
-        actualPidChild = getpid();
-        printf("Pid hijo %d, %ld\n", i, actualPidChild);
+    for (int i = 0; i < 8; i++) {
+        long pid = (long)fork();
+        if (pid == 0) {     
+            actualPidChild = getpid();
+            printf("Pid hijo %d, %ld\n", i, actualPidChild);
 
-        // Enviar el PID al padre
-        msg.type = 4;
-        msg.pid = actualPidChild;
-        msg.childStatus = 0;
-        msgsnd(msqid_parent, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
-        
-        // Entrar en el bucle infinito para escuchar tareas del padre
-        while (1) {
-            // Esperar a un mensaje del padre
-            msgrcv(msqid_child, &msg, sizeof(msg.text), actualPidChild, 0);
-            printf("Hijo %d recibió un mensaje del padre.\n", i);
+            // Enviar el PID al padre
+            msg.type = 4;
+            msg.pid = actualPidChild;
+            msg.childStatus = 0;
+            msgsnd(msqid_parent, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);
+            break;
+            // Entrar en el bucle infinito para escuchar otras señales o realizar otras tareas
 
-            // Aquí puedes agregar lógica adicional según tus necesidades
         }
     }
-}
 
-// El proceso padre puede continuar con otras tareas aquí si es necesario
-while (1) {
-    // Esperar y procesar otros mensajes o realizar tareas adicionales
-    msgrcv(msqid_parent, &msg, sizeof(msg.text), 0, 0);
-    if (msg.type == 4) {
-        sleep(1);
-        printf("Nuevo pid entrante %ld\n", msg.pid);
+    // El proceso padre puede continuar con otras tareas aquí si es necesario
+    while (1) {
+        // Esperar y procesar otros mensajes o realizar tareas adicionales
+        msgrcv(msqid_parent, &msg, sizeof(msg.text), 0, 0);
+        if (msg.type == 4) {
+            sleep(1);
+            printf("Nuevo pid entrante %ld\n", msg.pid);
+        }
+
+        // Puedes agregar más lógica aquí según tus necesidades
     }
-
-    // Puedes agregar más lógica aquí según tus necesidades
-}
 
 
 
@@ -257,3 +251,46 @@ while (1) {
 }
 
 
+/*int readFile(char *file, long displacement, int msqid_parent, sem_t *sem, long child_pid){
+    long lastNewLinePosition=displacement;
+    char buffer[20];
+    FILE *fp;
+
+    fp = fopen(file, "r");
+    if (!fp) {
+        perror("Error al abrir el archivo");
+        exit(EXIT_FAILURE);
+    }
+
+    fseek(fp, displacement, SEEK_SET);
+    printf("Comencé desde aquí: %ld\n", ftell(fp));
+
+    fgets(buffer, sizeof(buffer), fp);
+    printf("Last new line: %ld\n", lastNewLinePosition);
+
+    lastNewLinePosition=ftell(fp);
+    if (feof(fp)) {
+        lastNewLinePosition=-1;
+    }
+        
+    fclose(fp);
+    //Mensaje al padre que ya terminé de leer, voy a procesar la información, así que otro proceso puede ir leyendo mientras yo hago esto.
+    //enviar mensaje();
+    /*msg.type = 2;
+    msg.childStatus=1;
+    msg.pid = child_pid;
+    msg.linePosition = lastNewLinePosition;
+    if (lastNewLinePosition != -1) {
+        msgsnd(msqid_parent, (void *)&msg, BUFFER_SIZE, IPC_NOWAIT);
+        sem_post(sem);
+    }*/
+    //hago lo que hay en prueba c.
+    //mando mensaje
+
+    /*msg.type = 5;
+    msg.childStatus=0;
+    msg.linePosition = lastNewLinePosition;
+    msgsnd(msqid_parent, (void *)&msg, sizeof(msg.text), IPC_NOWAIT);*/
+
+    //return lastNewLinePosition;
+//}
