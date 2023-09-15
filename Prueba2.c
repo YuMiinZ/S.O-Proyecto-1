@@ -12,7 +12,7 @@
 
 
 #define BUFFER_SIZE 8192
-#define NUM_PROCESSES 3
+#define NUM_PROCESSES 8
 #define MSGSZ 300
 
 //volatile sig_atomic_t ready_to_search = 0; // Variable para señalizar que está listo para buscar
@@ -68,7 +68,7 @@ int buscarProcesoDesocupado(struct child_Status *childStatuses) {
 
 void readFile(char *file, long displacement, int msqid_parent, int child_num){
     long lastNewLinePosition=displacement;
-    char buffer[20];
+    char buffer[BUFFER_SIZE];
     FILE *fp;
 
     fp = fopen(file, "r");
@@ -117,7 +117,7 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num){
         msg.type=3;
         msg.childStatus=0;
         msg.process=child_num;
-        msg.linePosition = lastNewLinePosition;
+        msg.linePosition = -1;
         strcpy(msg.text, "Terminé de leer, voy a procesar.");
         printf("Hijo %d ha terminado de leer. Va a procesar. No es necesario que otro lea, porque se terminó de leer el archivo línea: %ld.\n", 
         child_num, msg.linePosition);
@@ -128,7 +128,7 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num){
         msg.type=3;
         msg.childStatus=0;
         msg.process=child_num;
-        msg.linePosition = lastNewLinePosition;
+        msg.linePosition = -2;
         strcpy(msg.text, "Terminé de procesar, voy a decirle al padre que estoy libre.");
         printf("Hijo %d ha terminado de procesar. Envio el mensaje al padre para que actualice mi estado de ocupado a libre.\n", 
         child_num);
@@ -274,6 +274,8 @@ int main(int argc, char *argv[]) {
                 }
                 else if(msg.type==3){
                     printf("Hemos terminado de leer el archivo y de procesar, se procederá a esperar que se terminenn de procesar y terminar.\n\n");
+                    //verificar si msg.linePosition == -2
+                    //termina el timer e imprime para ver cuanto duro
                     //exit(0);
                 }
                 else if(msg.type==4){
