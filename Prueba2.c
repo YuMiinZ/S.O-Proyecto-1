@@ -168,7 +168,7 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num, ch
 
     }else if(lastNewLinePosition==-1){
         msg.type=3;
-        msg.childStatus=0;
+        msg.childStatus=1;
         msg.process=child_num;
         msg.linePosition = -1;
         strcpy(msg.text, "Terminé de leer, voy a procesar.");
@@ -328,14 +328,19 @@ int main(int argc, char *argv[]) {
                         printf("No se encontraron procesos desocupados. Esperaremos en la cola a ver si algún hijo manda un mensaje de que está libre\n");
                     }
                 }
-                else if(msg.type==3){
-                    printf("Hemos terminado de leer el archivo y de procesar, se procederá a esperar que se terminenn de procesar y terminar.\n\n");
-                    /*childStatuses[msg.process].status=0;
+                else if(msg.type==3){ 
+                    
+                    if(msg.linePosition ==-1){
+                        printf("Hemos terminado de leer el archivo y de procesar, se procederá a esperar que se terminenn de procesar y terminar.\n\n");
+                    }
                     if (msg.linePosition == -2){
+                        printf("Ahora revisaremos si todos los procesos han terminado de procesar para finalizar.\n");
+                        childStatuses[msg.process].status=0;
                         if(verificarFinalizacionProcesos(childStatuses)){
+                            printf("Todos los procesos han terminado con sus funciones correctamente, vamos a terminar el programa.\n");
                             exit(0);
                         }
-                    }*/
+                    }
                 }
                 else if(msg.type==4){
                     printf("Recibi hijo %d, con pid %d.\n", msg.process, childStatuses[msg.process].status);
