@@ -43,7 +43,7 @@ int buscarProcesoDesocupado(struct child_Status childStatuses[]) {
 }
 
 
-int readFile(char *file, long displacement, int msqid_parent, sem_t *sem, int child_num){
+int readFile(char *file, long displacement, int msqid_parent, int child_num){
     long lastNewLinePosition=displacement;
     char buffer[20];
     FILE *fp;
@@ -117,8 +117,8 @@ int main(int argc, char *argv[]) {
     struct child_Status childStatuses[NUM_PROCESSES]; //Array de los hijos para almacenar su pid y estado si está ocupado o no.
 
     /*Configuración de semáforos*/
-    sem_t sem; // Semáforo para sincronización
-    sem_init(&sem, 1, 1); // Inicializar el semáforo
+    //sem_t sem; // Semáforo para sincronización
+    //sem_init(&sem, 1, 1); // Inicializar el semáforo
 
 
     /*For para crear los procesos*/
@@ -133,18 +133,19 @@ int main(int argc, char *argv[]) {
             status.type = 1;
             status.pid = actualPidChild;
             status.status = 0;
-            sem_wait(&sem); // Esperar a que se libere el semáforo
+            //sem_wait(&sem); // Esperar a que se libere el semáforo
             msgsnd(msqid_parent, &status, sizeof(status), IPC_NOWAIT); // Tipo 1
-            sem_post(&sem); // Liberar el semáforo
+            //sem_post(&sem); // Liberar el semáforo
 
             while (1) {
-                sem_wait(&sem);
+                //sem_wait(&sem);
                 msgrcv(msqid_child, &msg, MSGSZ, actualPidChild, 0);
                 
                 printf("Recibi el mensaje, soy hijo %d con pid %ld y comenzaré a leer\n", msg.process, msg.type);
                 //int line  = readFile(argv[2], displacement, msqid_parent, &childStatus);
-                readFile(argv[2], msg.linePosition, msqid_parent, &sem, msg.process);
-                sem_post(&sem);
+                //readFile(argv[2], msg.linePosition, msqid_parent, &sem, msg.process);
+                readFile(argv[2], msg.linePosition, msqid_parent, msg.process);
+                //sem_post(&sem);
             }
         }
     }
@@ -159,17 +160,17 @@ int main(int argc, char *argv[]) {
         //printf("Nuevo pid entrante %ld con estado %d\n", status.pid, status.status);
         
         if (status.type == 1) {
-            sem_wait(&sem);
+            //sem_wait(&sem);
             if (child_count < NUM_PROCESSES) {
                 childStatuses[child_count] = status;
                 printf("%d. Nuevo pid entrante %ld con estado %d\n", child_count, childStatuses[child_count].pid, childStatuses[child_count].status);
                 child_count++;
             }
-            sem_post(&sem);
+            //sem_post(&sem);
         }
 
         if (child_count == NUM_PROCESSES) {
-            sem_wait(&sem);
+            //sem_wait(&sem);
             printf("\nSe terminó la creación de hijos, ahora comenzaremos con las lecturas y el procesamiento.\n\n");
             printf("Buscaremos un proceso desocupado para asignarle la tarea de lectura.\n\n");
             int posicion = buscarProcesoDesocupado(childStatuses);
@@ -189,14 +190,14 @@ int main(int argc, char *argv[]) {
             } else {
                 printf("No se encontraron procesos desocupados. Esperaremos en la cola a ver si algún hijo manda un mensaje de que está libre\n");
             }
-            sem_post(&sem);
+            //sem_post(&sem);
 
             
             /*printf("Recibi el mensaje del hijo %d con pid %ld. Leyó hasta %ld, voy a buscar el próximo proceso libre para que continue con tu lectura.\n",
             msg.process, childStatuses[msg.process].pid, msg.linePosition);*/
             
             while(1){
-                sem_wait(&sem);
+                //sem_wait(&sem);
                 sleep(1);
                 printf("\nEsperando a que entre un mensaje a la cola padre.\n");
                 msgrcv(msqid_parent, &msg, MSGSZ, 0, 0);
@@ -226,7 +227,7 @@ int main(int argc, char *argv[]) {
                     printf("Hemos terminado de leer el archivo, se procederá a terminar.\n\n");
                     exit(0);
                 }
-                sem_post(&sem);
+                //sem_post(&sem);
             }
             
 
