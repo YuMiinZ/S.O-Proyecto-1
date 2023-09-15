@@ -49,6 +49,25 @@ int buscarProcesoDesocupado(struct child_Status childStatuses[]) {
     }
     return -1; // No se encontraron procesos desocupados
 }*/
+int verificarFinalizacionProcesos(struct child_Status *childStatuses) {
+    while (1) {
+        int allFree = 1; // Suponer que todos los procesos están libres
+
+        for (int i = 0; i < NUM_PROCESSES; i++) {
+            if (childStatuses[i].status != 0) {
+                allFree = 0; 
+                break; 
+            }
+        }
+
+        if (allFree) {
+            return 1; 
+        } else {
+            // Al menos uno está ocupado, espera un segundo antes de volver a verificar
+            sleep(1);
+        }
+    }
+}
 int buscarProcesoDesocupado(struct child_Status *childStatuses) {
     int i = 0;
     while (1) {
@@ -158,7 +177,7 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num, ch
         msgsnd(msqid_parent, &msg, sizeof(msg.text), IPC_NOWAIT); //Comentar este para que no se envie o enviar de otro tipo como notificacion
 
 
-        /*sleep(3):
+        process(buffer, patron, msqid_parent);
         msg.type=3;
         msg.childStatus=0;
         msg.process=child_num;
@@ -166,7 +185,7 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num, ch
         strcpy(msg.text, "Terminé de procesar, voy a decirle al padre que estoy libre.");
         printf("Hijo %d ha terminado de procesar. Envio el mensaje al padre para que actualice mi estado de ocupado a libre.\n", 
         child_num);
-        msgsnd(msqid_parent, &msg, sizeof(msg.text), IPC_NOWAIT);*/
+        msgsnd(msqid_parent, &msg, sizeof(msg.text), IPC_NOWAIT);
     }
 
     
@@ -283,9 +302,9 @@ int main(int argc, char *argv[]) {
                 //sleep(1);
                 //printf("\nEsperando a que entre un mensaje a la cola padre.\n");
                 msgrcv(msqid_parent, &msg, MSGSZ, 0, 0);
-                //printf("Recibi el mensaje del hijo %d con pid %ld, verificaré si necesitamos continuar la lectura o ya finalizamos.\n",
-                //msg.process, childStatuses[msg.process].pid);
-                //printf("Tipo de mensaje %ld\n", msg.type);
+                printf("Recibi el mensaje del hijo %d con pid %ld, verificaré si necesitamos continuar la lectura o ya finalizamos.\n",
+                msg.process, childStatuses[msg.process].pid);
+                printf("Tipo de mensaje %ld\n", msg.type);
                 if(msg.type==2){
                     //childStatuses[msg.process].status= msg.childStatus;
                     posicion = buscarProcesoDesocupado(childStatuses);
@@ -307,10 +326,13 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 else if(msg.type==3){
-                    //printf("Hemos terminado de leer el archivo y de procesar, se procederá a esperar que se terminenn de procesar y terminar.\n\n");
-                    //verificar si msg.linePosition == -2
-                    //termina el timer e imprime para ver cuanto duro
-                    //exit(0);
+                    printf("Hemos terminado de leer el archivo y de procesar, se procederá a esperar que se terminenn de procesar y terminar.\n\n");
+                    childStatuses[msg.process].status=0;
+                    if (msg.linePosition == -2){
+                        if(verificarFinalizacionProcesos(childStatuses)){
+                            exit(0);
+                        }
+                    }
                 }
                 else if(msg.type==4){
                     //printf("Recibi hijo %d, con pid %d.\n", msg.process, childStatuses[msg.process].status);
