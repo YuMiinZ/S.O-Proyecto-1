@@ -71,7 +71,13 @@ int verificarFinalizacionProcesos(struct child_Status *childStatuses) {
 
 //Busqueda del siguiente desocupado secuencialmente
 int buscarProcesoDesocupado(struct child_Status *childStatuses, int posicion) {
-    int i = posicion+1;
+    int i;
+    if(posicion==NUM_PROCESSES-1){
+        i=0;
+    }else{
+        i = posicion+1;
+    }
+    
     while (1) {
         if (childStatuses[i].status == 0) {
             childStatuses[i].status = 1;
