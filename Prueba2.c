@@ -42,7 +42,6 @@ int verificarFinalizacionProcesos(struct child_Status *childStatuses) {
             return 1; 
         } else {
             // Al menos uno está ocupado, espera un segundo antes de volver a verificar
-            sleep(1);
         }
     }
 }
@@ -65,7 +64,6 @@ int buscarProcesoDesocupado(struct child_Status *childStatuses, int posicion) {
 
         if (i == posicion) {
             i=0;
-            sleep(1); // Esperar un segundo antes de volver a verificar
         }
     }
 }
@@ -80,7 +78,6 @@ void process(char* buffer, char* param, int msqid_parent){
 
     int offset = 0;
     while (regexec(&reegex, buffer + offset, 1, &match, 0) == 0) {
-        // Increment the count for each match
         count++;
         int start_pos = offset + match.rm_so;
         int end_pos = offset + match.rm_eo;
@@ -99,10 +96,8 @@ void process(char* buffer, char* param, int msqid_parent){
         strcpy(msg.text, &buffer[paragraph_start]);
         msgsnd(msqid_parent, &msg, sizeof(msg.text), IPC_NOWAIT);
         //printf("Match %d: Paragraph:\n%.*s\n", count, paragraph_end - paragraph_start, &buffer[paragraph_start]);
-        // Move the offset to the end of the match and continue searching
         offset += match.rm_eo;
 
-        // Check if we've reached the end of the buffer
         if (offset >= BUFFER_SIZE) {
             break;
         }
@@ -121,10 +116,8 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num, ch
     }
 
     fseek(fp, displacement, SEEK_SET);
-    printf("Comencé desde aquí: %ld\n", ftell(fp));
 
     fgets(buffer, sizeof(buffer), fp);
-    printf("Last new line position: %ld\n", ftell(fp));
 
     lastNewLinePosition=ftell(fp);
     if (feof(fp)) {
@@ -140,8 +133,6 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num, ch
         msg.process=child_num;
         msg.linePosition = lastNewLinePosition;
         strcpy(msg.text, "Terminé de leer, voy a procesar.");
-        printf("Hijo %d ha terminado de leer. Voy a procesar. Otro proceso puede continuar leyendo donde lo dejé que fue posición %ld.\n", 
-        child_num, msg.linePosition);
         msgsnd(msqid_parent, &msg, sizeof(msg.text), IPC_NOWAIT);
 
         //Hora de procesar
@@ -151,8 +142,6 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num, ch
         msg.process=child_num;
         msg.linePosition = lastNewLinePosition;
         strcpy(msg.text, "Terminé de procesar, voy a decirle al padre que estoy libre.");
-        printf("Hijo %d ha terminado de procesar. Envio el mensaje al padre para que actualice mi estado de ocupado a libre.\n", 
-        child_num);
         msgsnd(msqid_parent, &msg, sizeof(msg.text), IPC_NOWAIT);
 
     }else if(lastNewLinePosition==-1){
@@ -161,8 +150,6 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num, ch
         msg.process=child_num;
         msg.linePosition = -1;
         strcpy(msg.text, "Terminé de leer, voy a procesar.");
-        printf("Hijo %d ha terminado de leer. Va a procesar. No es necesario que otro lea, porque se terminó de leer el archivo línea: %ld.\n", 
-        child_num, msg.linePosition);
         msgsnd(msqid_parent, &msg, sizeof(msg.text), IPC_NOWAIT); //Comentar este para que no se envie o enviar de otro tipo como notificacion
 
 
@@ -172,8 +159,6 @@ void readFile(char *file, long displacement, int msqid_parent, int child_num, ch
         msg.process=child_num;
         msg.linePosition = -2;
         strcpy(msg.text, "Terminé de procesar, voy a decirle al padre que estoy libre.");
-        printf("Hijo %d ha terminado de procesar. Envio el mensaje al padre para que actualice mi estado de ocupado a libre.\n", 
-        child_num);
         msgsnd(msqid_parent, &msg, sizeof(msg.text), IPC_NOWAIT);
     }
 }
@@ -224,28 +209,21 @@ int main(int argc, char *argv[]) {
     
     // Esperar y procesar actualizaciones de estado y asignación de tareas de los hijos
     while (1) {
-        sleep(1);
         struct child_Status status;
         msgrcv(msqid_parent, &status, sizeof(status), 1, 0); // Tipo 1
-        printf("Nuevo pid entrante %ld con estado %d\n", status.pid, status.status);
         
         if (status.type == 1) {
             if (child_count < NUM_PROCESSES) {
                 childStatuses[child_count] = status;
-                printf("%d. Nuevo pid entrante %ld con estado %d\n", child_count, childStatuses[child_count].pid, childStatuses[child_count].status);
                 child_count++;
             }
         }
 
         if (child_count == NUM_PROCESSES) {
-            printf("\nSe terminó la creación de hijos, ahora comenzaremos con las lecturas y el procesamiento.\n\n");
-            printf("Buscaremos un proceso desocupado para asignarle la tarea de lectura.\n\n");
             
             int posicion = 0;
             if (posicion != -1) {
-                printf("El primer proceso que encontramos desocupado es %d y su pid es %ld\n", posicion, childStatuses[posicion].pid);
                 childStatuses[posicion].status = 1; // Configurar como ocupado antes de enviar el mensaje
-                printf("Se pasa el proceso a ocupado para probar si encuentra otro proceso libre.\n\n");
         
                 // Crear y enviar el mensaje
                 msg.type = childStatuses[posicion].pid;
@@ -254,24 +232,14 @@ int main(int argc, char *argv[]) {
                 strcpy(msg.text, "Comenzar a leer.");
                 msgsnd(msqid_child, &msg, sizeof(msg.text), IPC_NOWAIT); // Envía el mensaje al proceso hijo
 
-                printf("Mensaje enviado...\n\n");
-            } else {
-                printf("No se encontraron procesos desocupados. Esperaremos en la cola a ver si algún hijo manda un mensaje de que está libre\n");
             }
             
             while(1){
-                sleep(1);
-                printf("\nEsperando a que entre un mensaje a la cola padre.\n");
                 msgrcv(msqid_parent, &msg, MSGSZ, 0, 0);
-                printf("Recibi el mensaje del hijo %d con pid %ld, verificaré si necesitamos continuar la lectura o ya finalizamos.\n",
-                msg.process, childStatuses[msg.process].pid);
-                printf("Tipo de mensaje %ld\n", msg.type);
                 if(msg.type==2){
                     posicion = buscarProcesoDesocupado(childStatuses, msg.process);
                     if (posicion != -1) {
-                        printf("El primer proceso que encontramos desocupado es %d y su pid es %ld\n", posicion, childStatuses[posicion].pid);
                         childStatuses[posicion].status = 1; // Configurar como ocupado antes de enviar el mensaje
-                        printf("Se pasa el proceso a ocupado para probar si encuentra otro proceso libre.\n\n");
                         
                         // Crear y enviar el mensaje
                         msg.type = childStatuses[posicion].pid;
@@ -280,29 +248,18 @@ int main(int argc, char *argv[]) {
                         strcpy(msg.text, "Comenzar a leer.");
                         msgsnd(msqid_child, &msg, sizeof(msg.text), IPC_NOWAIT); // Envía el mensaje al proceso hijo
 
-                        printf("Mensaje enviado...\n\n");
-                    } else {
-                        printf("No se encontraron procesos desocupados. Esperaremos en la cola a ver si algún hijo manda un mensaje de que está libre\n");
                     }
                 }
                 else if(msg.type==3){ 
-                    if(msg.linePosition ==-1){
-                        printf("Hemos terminado de leer el archivo y de procesar, se procederá a esperar que se terminenn de procesar y terminar.\n\n");
-                    }
+                   
                     if (msg.linePosition == -2){
-                        printf("Ahora revisaremos si todos los procesos han terminado de procesar para finalizar.\n");
                         childStatuses[msg.process].status=0;
                         if(verificarFinalizacionProcesos(childStatuses)){
-                            printf("Todos los procesos han terminado con sus funciones correctamente, vamos a terminar el programa.\n");
                             exit(0);
                         }
                     }
                 }
                 else if(msg.type==4){
-                    printf("Recibi hijo %d, con pid %d.\n", msg.process, childStatuses[msg.process].status);
-                    printf("Hijo %d, con pid %ld ha terminado de procesar, es hora de cambiar su estado de ocupado a libre.\n\n", msg.process,
-                    childStatuses[msg.process].pid);
-                    
                     childStatuses[msg.process].status=0;
                     
                 }
