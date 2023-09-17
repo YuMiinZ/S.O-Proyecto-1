@@ -14,7 +14,7 @@
 #include <signal.h>
 
 #define BUFFER_SIZE 8192
-#define NUM_PROCESSES 6
+#define NUM_PROCESSES 15
 #define MSGSZ 300
 
 struct message {
